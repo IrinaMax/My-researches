@@ -1,0 +1,25 @@
+## I'm going to create 2 tables df.v and df.v2
+# Table1
+id <- c(1:10 )
+amount <- c(20, "null" ,31, "null", 26, "null" ,55,"null" ,60, "null")
+df.v <- data.frame(id, amount)
+df.v
+# Table2
+amount2 <- c( "null", 25 , "null", 30, "null" ,40, "null" ,50,60,60)
+df.v2 <- data.frame(id,amount2)
+# rename colonm amount2 to amount
+df.v2 <- rename(df.v2, "id" = "id", "amount" = "amount2")
+df.v2
+
+## My sugession ###########################################
+library(dplyr)
+##   we need to exchenge "null" string to NA in Table1
+df.v[df.v=="null"] <-NA
+df.v
+##   we need to exchenge "null" string to NA in Table2
+df.v2[df.v2=="null"] <- NA
+df.v2
+res <- merge(df.v, df.v2, all = T)
+res <- res[complete.cases(res),]
+print(res)
+
