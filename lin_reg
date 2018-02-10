@@ -27,3 +27,4 @@ cor.data
 print(corrplot(cor.data, method ='color'))
 corrgram(df)
 corrgram(df, order= T, lower.panel = panel.shade, upper.panel = panel.pie, text.panel = panel.txt)
+![image](https://user-images.githubusercontent.com/16123495/36056999-439ed574-0dbe-11e8-83a2-23c17d85426d.png)
