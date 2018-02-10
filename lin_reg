@@ -1,0 +1,29 @@
+# Linear model
+
+
+df <- read.csv('student-mat.csv', sep = ';')
+head(df)
+# Exploratory Data Analysis
+
+# Let create the scatter plot od count vs twmp. Set a good Alpf value.
+#Lets check for missing value
+any(is.na(df))
+str(df)
+
+library(ggplot2)
+library(ggthemes)
+library(dplyr)
+library(corrgram)
+library(corrplot)
+
+# num only
+num.cols <- sapply(df,is.numeric)
+num.cols
+# filter
+cor.data <- cor(df[,num.cols])
+cor.data
+
+# cor plot and corgramm
+print(corrplot(cor.data, method ='color'))
+corrgram(df)
+corrgram(df, order= T, lower.panel = panel.shade, upper.panel = panel.pie, text.panel = panel.txt)
