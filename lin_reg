@@ -135,6 +135,7 @@ summary(model)
 # Multiple R-squared:  0.8581,	Adjusted R-squared:  0.8334 
 # F-statistic: 34.67 on 41 and 235 DF,  p-value: < 2.2e-16
 
+## Let’s go through each coefficient: the intercept is the fitted biomass value when all variables are equal to 0 for the Control units.
 
 # normalise or standardize
 library(caret)
