@@ -81,15 +81,19 @@ plot(pl[sample(nrow(pl),100),])
 library(caret)
 library(klaR)
 #confusionMatrix(tt.salary$salary, tn$salary)  #npt working
-pred <- as.integer(salary.new)
+pred <- as.integer(salary.n)
 pred %>% head
 reference <- tn$salary
 reference %>% str
 u <- union(pred, reference)
 u %>% head
 t <- table(factor(pred,u), factor(reference,u))
-confusionMatrix(t)
-
+c.mat <- confusionMatrix(t)
+str(c.mat)
+overall <- c.mat$overall
+overall
+overall.accuracy <- overall['Accuracy'] 
+overall.accuracy
 # Overall Statistics
 # 
 # Accuracy : 0.0077          
@@ -165,6 +169,18 @@ MAPE <- function(y,yhat,percent=TRUE)
 yHat <- mean(pl$pred)
 MAPE <- MAPE(pl$pred,yHat)
 MAPE
+
+#staistics by forecast library
+install.packages("forecast")
+library(forecast)
+accuracy(pl$actual, salary.new)
+#                   ME     RMSE      MAE       MPE    MAPE
+# Test set -0.007988452 51.12539 40.97534 -12.02546 41.7884
+accuracy(salary.new, 1:1000000 )
+
+#              ME     RMSE      MAE      MPE     MAPE
+#Test set 499884.4 577250.2 499884.5 99.83435 99.93356
+
 
 library(apaTables)
 apa.aov.table(lm(salary ~ jobType+degree+ major+yearsExperience+industry +milesFromMetropolis, tn),table.number = 1)
@@ -251,6 +267,11 @@ apa.reg.table(lm(salary ~ jobType+degree+ major+yearsExperience+industry +milesF
 # Square brackets are used to enclose the lower and upper limits of a confidence interval.
 
 
+confMat <- table(class(tn$salary),tt.salary$salary)
+accuracy <- sum(diag(confMat))/sum(confMat)
+accuracy
+
+
 
 # model2 using  glmnet######################################
 install.packages("glmnet")
@@ -331,24 +352,23 @@ mse_test_value
 
 
 
-obs = c(sample(c(0,1),20,replace=TRUE),NA);
-obs = obs[order(obs)]
-obs
-pred = runif(length(obs),0,1); pred = pred[order(pred)]
-pred
-#calculate the confusion matrix
-confusion.matrix(obs,pred,threshold=0.5)
+# obs = c(sample(c(0,1),20,replace=TRUE),NA);
+# obs = obs[order(obs)]
+# obs
+# pred = runif(length(obs),0,1); pred = pred[order(pred)]
+# pred
+# #calculate the confusion matrix
+# confusion.matrix(obs,pred,threshold=0.5)
+# 
+# ac <- window(tn$salary, start = 1, end = 300)
+# ac
+install.packages("forecast")
+library(forecast)
+accuracy(pl$actual, salary.new)
+#                   ME     RMSE      MAE       MPE    MAPE
+# Test set -0.007988452 51.12539 40.97534 -12.02546 41.7884
 
-ac <- window(tn$salary, start = 1, end = 300)
-ac
-aaPred <- forecast( m1, h=length(tt.salary))
-
-
-accuracy(m1, salary.new)
-
-
-
-# train a naive bayes model
+# train a GBMNet
 library(data.table)
 require(gbm)
 library(gbm)
@@ -373,6 +393,6 @@ taken.time <- end.time-st.time
 taken.time
 m.boost 
 # make predictions
-
+pred.boost <- 
 
 library(apaTables)
