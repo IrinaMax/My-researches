@@ -1,0 +1,378 @@
+library(dplyr)
+library(caret)
+library(klaR)
+library(apaTables)
+
+
+tt.f <- read.csv("test_features_2013-03-07.csv")
+tt.f  %>% summary
+tt.f %>% head
+
+tn.f <- read.csv("train_features_2013-03-07.csv")
+tn.f %>% summary
+tn.f %>% head
+
+
+tn.s <- read.csv("train_salaries_2013-03-07.csv")
+tn.s %>% head
+tn.s %>% summary()
+
+# looking for NA
+sapply(tt.f, function(x) sum(is.na(x)))
+hist(as.numeric(tt.f$companyId))
+plot(tn.f[sample(nrow(tn.f), 50),])
+
+sapply(tn.f, function(x) sum(is.na(x)))
+
+
+sapply(tn.s, function(x) sum(is.na(x)))
+
+# library("VIM")
+# aggr(tt.f)
+
+tn <- merge(tn.f, tn.s, by = "jobId")
+tn %>% head
+tn %>% dim
+hist(tn$salary)
+t.test(tn$salary)
+tn.data <- data.matrix(tn[ ,2:length(tn)])
+cor.mat <- round(cor(tn.data),2)
+cor.mat
+# cor.mat <- cor(tn.data, use = "pairwise.complete.obs")
+# cor.mat
+# try lin reg
+start.time <- Sys.time()
+m1 <- lm(salary ~ jobType+degree+ major+yearsExperience+industry +milesFromMetropolis, tn)
+m1 %>% summary()
+end.time <- Sys.time()
+time.taken <- end.time - start.time
+time.taken
+#  Time difference of 3.52412 secs
+
+# # try lin reg with companyId not suppose to be significant
+# start.time <- Sys.time()
+# m3 <- lm(salary ~ companyId+jobType+degree+ major+yearsExperience+industry +milesFromMetropolis, tn)
+# m3 %>% summary()
+# end.time <- Sys.time()
+# time.taken <- end.time - start.time
+# time.taken
+
+# make prediction based on the linear model m1 for test tt.f
+salary.new <- predict(m1, tt.f[,-1])
+salary.new %>% head
+salary.n<- round(salary.new)
+
+#make data frame for saving submission csv file
+tt.salary <- data.frame(tt.f$jobId, salary.n)
+tt.salary %>% head
+names(tt.salary) <- c("jobId", "salary")
+tt.salary %>% summary
+write.csv(tt.salary, "test_salaries.csv")
+
+#plot prediction
+
+pl <- data.frame(tn$salary, salary.new)
+names(pl) <- c("actual", "predic")
+pl %>% head
+plot(pl[sample(nrow(pl),100),]) 
+
+#not linear :()
+
+library(caret)
+library(klaR)
+#confusionMatrix(tt.salary$salary, tn$salary)  #npt working
+pred <- as.integer(salary.new)
+pred %>% head
+reference <- tn$salary
+reference %>% str
+u <- union(pred, reference)
+u %>% head
+t <- table(factor(pred,u), factor(reference,u))
+confusionMatrix(t)
+
+# Overall Statistics
+# 
+# Accuracy : 0.0077          
+# 95% CI : (0.0075, 0.0078)
+# No Information Rate : 0.0105          
+# P-Value [Acc > NIR] : 1              
+#
+table(factor(tt.salary$salary, levels=min(tt.salary$salary):max(tt.salary$salary)), factor(tn$salary, levels=min(tn$salary):max(tn$salary)))
+
+
+
+#Calculating MSE
+x <- tt.f[,-1]
+p <- predict(m1, tt.f[,-1]) # or: predict(model, test)
+p %>% head
+#MSE without rounding predicted values [1] 2613.806
+(1/1000000)*sum((tn.s$salary - data.frame(p))^2)
+
+#AVG - test mean square error
+mse_test_value <- mean((tn$salary - salary.n)^2)
+mse_test_value
+# library("MatrixModels", lib.loc="/Library/Frameworks/R.framework/Versions/3.4/Resources/library")
+# library(MatrixModels)
+# mse(tn$salary, tt.salary$salary)
+
+
+#RSS [1] 384461604
+sum(m1$residuals^2)
+# [1] 384.4616
+mse <- function(x) mean(x$residuals^2)
+mse(m1)
+
+# ststistics
+RSS <- c(crossprod(m1$residuals))
+RSS
+MSE <- RSS / length(m1$residuals)
+MSE
+RMSE <- sqrt(MSE)
+RMSE
+summary(m1$model)
+
+#min_max_accuracy 71.2%
+min_max_acc <- mean (apply(pl, 1,min) / apply(pl, 1,max))
+min_max_acc  ## [1] 0.7117415
+
+#Mean absolute percentage error: MAPE=mean(|pi|).
+pl %>% summary
+pred <- as.integer(salary.new)
+pred %>% head
+reference <- tn$salary
+reference %>% head
+u <- union(pred, reference)
+u %>% head
+t <- table(factor(pred,u), factor(reference,u))
+t %>% head
+
+df.pred <- data.frame(cbind(pl$actual,pl$predic))
+cor.Accuracy <- cor(df.pred)
+cor.Accuracy
+mape <- (mean(abs((pl$actual - pl$predic))/pl$actual))*100
+mape
+mape <- (mean(abs((pl$actual - pl$predic))/pl$actual))*100
+pl %>% head
+## mean absolute percentage (prediction) error
+MAPE <- function(y,yhat,percent=TRUE)
+{
+  if(percent){
+    100*mean(abs( (y-yhat)/y ))
+  } else {
+    mean(abs( (y-yhat)/y ))
+  }
+}
+yHat <- mean(pl$pred)
+MAPE <- MAPE(pl$pred,yHat)
+MAPE
+
+library(apaTables)
+apa.aov.table(lm(salary ~ jobType+degree+ major+yearsExperience+industry +milesFromMetropolis, tn),table.number = 1)
+
+# Table 1 
+# 
+# ANOVA results using salary as the dependent variable
+# 
+# 
+# Predictor           SS     df           MS          F    p partial_eta2 CI_90_partial_eta2
+# (Intercept) 461073909.97      1 461073909.97 1199238.09 .000                                
+# jobType 385797445.26      7  55113920.75  143349.50 .000          .50         [.50, .50]
+# degree  18373425.44      4   4593356.36   11947.17 .000          .05         [.04, .05]
+# major  11908573.07      8   1488571.63    3871.73 .000          .03         [.03, .03]
+# yearsExperience 210179494.80      1 210179494.80  546669.96 .000          .35         [.35, .35]
+# industry 130131922.85      6  21688653.81   56411.48 .000          .25         [.25, .25]
+# milesFromMetropolis 133098216.91      1 133098216.91  346184.09 .000          .26         [.26, .26]
+# Error 384461603.71 999972       384.47                                                
+# 
+# Note: Values in square brackets indicate the bounds of the 90% confidence interval for partial eta-squared 
+# 
+apa.cor.table(tn[,-1],table.number = 3,show.conf.interval = F)
+
+# Table 3 
+# 
+# Means, standard deviations, and correlations
+# 
+# 
+# Variable               M      SD    1     2     
+# 1. yearsExperience     11.99  7.21              
+# 
+# 2. milesFromMetropolis 49.53  28.88 .00         
+# 
+# 3. salary              116.06 38.72 .38** -.30**
+#   
+#   
+#   Note. * indicates p < .05; ** indicates p < .01.
+# M and SD are used to represent mean and standard deviation, respectively.
+
+apa.reg.table(lm(salary ~ jobType+degree+ major+yearsExperience+industry +milesFromMetropolis, tn),table.number = 4)
+
+# Table 4 
+# 
+# Regression results using salary as the criterion
+# 
+# 
+# Predictor        b         b_95%_CI sr2 sr2_95%_CI             Fit
+# (Intercept) 134.87** [134.63, 135.11]                               
+# jobTypeCFO  -9.80**   [-9.96, -9.65] .00 [.00, .00]                
+# jobTypeCTO  -9.79**   [-9.94, -9.63] .00 [.00, .00]                
+# jobTypeJANITOR -62.36** [-62.52, -62.20] .15 [.15, .15]                
+# jobTypeJUNIOR -49.80** [-49.95, -49.64] .10 [.10, .10]                
+# jobTypeMANAGER -29.87** [-30.02, -29.71] .04 [.04, .04]                
+# jobTypeSENIOR -39.79** [-39.94, -39.63] .07 [.07, .07]                
+# jobTypeVICE_PRESIDENT -19.95** [-20.10, -19.79] .02 [.02, .02]                
+# degreeDOCTORAL  10.03**    [9.90, 10.16] .01 [.01, .01]                
+# degreeHIGH_SCHOOL  -5.72**   [-5.91, -5.52] .00 [.00, .00]                
+# degreeMASTERS   5.00**     [4.87, 5.13] .00 [.00, .00]                
+# degreeNONE  -9.40**   [-9.60, -9.21] .00 [.00, .00]                
+# majorBUSINESS   7.70**     [7.47, 7.92] .00 [.00, .00]                
+# majorCHEMISTRY   1.08**     [0.86, 1.30] .00 [.00, .00]                
+# majorCOMPSCI   4.04**     [3.82, 4.27] .00 [.00, .00]                
+# majorENGINEERING  10.60**   [10.38, 10.83] .00 [.00, .00]                
+# majorLITERATURE  -3.62**   [-3.85, -3.40] .00 [.00, .00]                
+# majorMATH   5.14**     [4.92, 5.37] .00 [.00, .00]                
+# majorNONE  -4.96**   [-5.18, -4.73] .00 [.00, .00]                
+# majorPHYSICS   2.33**     [2.10, 2.55] .00 [.00, .00]                
+# yearsExperience   2.01**     [2.00, 2.02] .14 [.14, .14]                
+# industryEDUCATION  -9.99**  [-10.13, -9.85] .00 [.00, .00]                
+# industryFINANCE  21.14**   [21.00, 21.29] .02 [.02, .02]                
+# industryHEALTH   6.25**     [6.10, 6.39] .00 [.00, .00]                
+# industryOIL  21.31**   [21.17, 21.45] .02 [.02, .02]                
+# industrySERVICE  -4.98**   [-5.12, -4.84] .00 [.00, .00]                
+# industryWEB  12.11**   [11.97, 12.25] .01 [.01, .01]                
+# milesFromMetropolis  -0.40**   [-0.40, -0.40] .09 [.09, .09]                
+# R2 = .744**
+#   95% CI[.71,.74]
+# 
+# 
+# Note. * indicates p < .05; ** indicates p < .01.
+# A significant b-weight indicates the semi-partial correlation is also significant.
+# b represents unstandardized regression weights; 
+# sr2 represents the semi-partial correlation squared.
+# Square brackets are used to enclose the lower and upper limits of a confidence interval.
+
+
+
+# model2 using  glmnet######################################
+install.packages("glmnet")
+library(glmnet)
+x <- model.matrix(salary ~ jobType+degree+ major+yearsExperience+industry +milesFromMetropolis, -9, data =tn)
+x %>% head
+y <- as.matrix(tn[,9])
+y
+set.seed(123)
+m2 <- cv.glmnet(x,y,type.measure="mae")
+m2 %>% names
+m2$cvm
+plot(m2)
+# nx <- read.table(tt.f[,-1])
+# nx %>% head
+# nx <- na.omit(nx)
+# nx<- NULL
+
+# matrix <- sapply(tt.f[,-1], as.numeric)
+# matrix %>% head
+# matrix <- as.matrix(matrix)
+# #sapply(matrix, function(x) sum(is.na(x)))
+# s3 <-predict(m2,  newx = matrix)
+
+
+nx <- model.matrix(~companyId+jobType+degree+ major+yearsExperience+industry +milesFromMetropolis, -1, data= tt.f)
+nx %>% head
+s2 <- predict(m2, newx = nx )
+s2 %>% head
+s2 <- round(s2)
+#make data frame for saving submission csv file
+tt.s2 <- data.frame(tt.f$jobId, s2)
+tt.s2 %>% head
+names(tt.s2) <- c("jobId", "salary")
+tt.s2 %>% summary
+write.csv(tt.s2, "test_salaries2.csv")
+#t.test(tt.s2$salary)
+
+
+# accuracy
+#install.packages("SDMTools")
+library(SDMTools)
+pl <- data.frame(tn$salary, tt.salary$salary)
+pl %>% head
+accuracy(pl$tn.salary, pl$tt.salary.salary, threshold = 0.5)
+is.na(pl)
+
+# Create a confusion matrix from the given outcomes, whose rows correspond
+# to the actual and the columns to the predicated classes.
+createConfusionMatrix <- function(act, pred) {
+  # You've mentioned that neither actual nor predicted may give a complete
+  # picture of the available classes, hence:
+  numClasses <- max(act, pred)
+  # Sort predicted and actual as it simplifies what's next. You can make this
+  # faster by storing `order(act)` in a temporary variable.
+  pred <- pred[order(act)]
+  act  <- act[order(act)]
+  sapply(split(pred, act), tabulate, nbins=numClasses)
+}
+
+
+pl %>% head
+pl %>%  summary
+createConfusionMatrix(tn$salary,pl$tt.salary.salary)
+library(caret)
+pl1 <- table(pl$tn.salary,salary.new)
+obs <- factor(pl$tn.salary, pl1)
+pred <- factor(salary.new, pl1)
+confusion.matrix(obs,pred, threshold = 0.5)
+
+#MSE
+sum((tn$salary - predict(m1, tt.f[,-1]))^2)
+#AVG - test mean square error
+mse_test_value <- mean((tn$salary - predict(m1, tt.f[,-1]))^2)
+mse_test_value
+
+
+
+
+
+obs = c(sample(c(0,1),20,replace=TRUE),NA);
+obs = obs[order(obs)]
+obs
+pred = runif(length(obs),0,1); pred = pred[order(pred)]
+pred
+#calculate the confusion matrix
+confusion.matrix(obs,pred,threshold=0.5)
+
+ac <- window(tn$salary, start = 1, end = 300)
+ac
+aaPred <- forecast( m1, h=length(tt.salary))
+
+
+accuracy(m1, salary.new)
+
+
+
+# train a naive bayes model
+library(data.table)
+require(gbm)
+library(gbm)
+
+tn %>% dim
+#separating training and test data
+set.seed(123)
+# smp_size <- floor(0.90 * nrow(df))
+# 
+# train_ind <- sample(seq_len(nrow(df)), size = smp_size, replace = FALSE  )
+# 
+# train <- df[train_ind, ]
+# test <- df[-train_ind, ]
+#
+st.time <- Sys.time()
+m.boost=gbm(salary ~ jobType+degree+ major+yearsExperience+industry +milesFromMetropolis ,data = tn[,-1 ],distribution = "gaussian",n.trees = 100,
+             shrinkage = 0.01, interaction.depth = 4)
+m.boost
+# time was about 30 sec 
+end.time <- Sys.time()
+taken.time <- end.time-st.time
+taken.time
+m.boost 
+# make predictions
+
+
+library(apaTables)
