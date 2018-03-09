@@ -1,0 +1,70 @@
+devtools::install_github("alexioannides/elasticsearchr")
+library(elasticsearchr)
+# Opren connection in Terminal by executing
+# $ brew install elasticsearch
+# $ elasricsearch
+
+es <- elastic("http://localhost:9200", "iris", "data")
+
+#  we can check it out on the brouser http://localhost:9200/iris/data/1
+print(es$index)
+#To index (insert) data from a data frame, use the %index% operator as follows:
+elastic("http://localhost:9200", "iris", "data") %index% iris
+# Documents can be deleted in three different ways using the %delete% operator.
+elastic("http://localhost:9200", "iris") %delete% TRUE
+#Alternatively, documents can be deleted on a type-by-type basis leaving the index and it’s mappings untouched,by referencing both the index and the document type as the resource - e.g.,
+elastic("http://localhost:9200", "iris", "data") %delete% TRUE
+
+#Finally, specific documents can be deleted by referencing their ids directly - e.g.,
+elastic("http://localhost:9200", "iris", "data") %delete% c("1", "2", "3", "4", "5")
+es
+for_everything <- query('{
+  "match_all": {}
+                        }')
+elastic("http://localhost:9200", "iris", "data") %search% for_everything
+
+#Query results can be sorted on multiple fields by defining a sort object using the same Elasticsearch JSON syntax - e.g. to sort by sepal_width in ascending order the required sort object would be defined as,
+by_sepal_width <- sort_on('{"sepal_width": {"order": "asc"}}')
+#This is then added to a query object whose results we want sorted and executed using the %search% operator as before - e.g.,
+elastic("http://localhost:9200", "iris", "data") %search% (for_everything + by_sepal_width)
+
+#any type of aggregation that Elasticsearch makes available can be defined in an aggs object - e.g. to compute the average sepal_width per-species of flower we would specify the following aggregation,
+
+avg_sepal_width <- aggs('{
+  "avg_sepal_width_per_species": {
+    "terms": {
+      "field": "species.keyword",
+      "size": 3
+    },
+    "aggs": {
+      "avg_sepal_width": {
+        "avg": {
+          "field": "sepal_width"
+        }
+      }
+    }
+  }
+}')
+
+#(Elasticsearch 5.x users please note that when using the out-of-the-box mappings the above aggregation requires that "field": "species" be changed to "field": "species.keyword" - see here for more information as to why)
+
+#This aggregation is also executed via the %search% operator on the appropriate resource - e.g.,
+
+elastic("http://localhost:9200", "iris", "data") %search% avg_sepal_width
+
+#Queries and aggregations can be combined such that the aggregations are computed on the results of the query. For example, to execute the combination of the above query and aggregation, we would execute,
+
+elastic("http://localhost:9200", "iris", "data") %search% (for_everything + avg_sepal_width)
+
+#where the combination yields,
+
+print(for_everything + avg_sepal_width)
+
+#Mappings
+#Finally, I have included the ability to create an empty index with a custom mapping, using the %create% operator - e.g.,
+
+elastic("http://localhost:9200", "iris") %create% mapping_default_simple()
+#Where in this instance mapping_default_simple() is a default mapping that I have shipped with elasticsearchr. It switches-off the text analyser for all fields of type ‘string’ (i.e. switches off free text search), allows all text search to work with case-insensitive lower-case terms, and maps any field with the name ‘timestamp’ to type ‘date’, so long as it has the appropriate string or long format.
+
+#Shutdown
+#To shutdown Elasticsearch, from the terminal where you launched elasticsearch, hit Ctrl+C
