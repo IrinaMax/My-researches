@@ -316,4 +316,4 @@ abline(lm( df.gbm$actual ~ df.gbm$new  , data=df.gbm),  col = "black")
 # the red line will show the perfect line of 45degree where is for perfect case
 abline(lm(df.gbm$actual ~ df.gbm$new  + 0),  col="red")
 
-# Thank you for watching ___________________________END_______________________________________
+# ___________________________END_______________________________________
