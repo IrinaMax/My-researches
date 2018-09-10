@@ -1,0 +1,72 @@
+  # the script isimplementing recendations of the movie base on the open data movielens
+  # https://grouplens.org/datasets/movielens
+  
+  setwd("~//R/Recommender_engain/ml-latest-small/")
+  movies=read.csv("movies.csv")
+  movies %>% head
+  links=read.csv("links.csv") 
+  ratings=read.csv("ratings.csv") 
+  tags=read.csv("tags.csv") 
+  
+  #Import the reshape2 library. Use the file install.packages(“reshape2”) if the package is not already installed
+  install.packages("reshape2", dependencies=TRUE)
+  install.packages("stringi", dependencies=TRUE)
+  library(stringi) 
+  library(reshape2)
+  
+  #Create ratings matrix with rows as users and columns as movies. We don't need timestamp 
+  ratingmat = dcast(ratings, userId~movieId, value.var = "rating", na.rm=FALSE)
+  
+  #We can now remove user ids 
+  ratingmat = as.matrix(ratingmat[,-1]) 
+  ratingmat
+  
+  #Uncomment the following line if the package is not installed 
+ # https://grouplens.org/datasets/movielens
+  library(recommenderlab) 
+  
+  #Convert ratings matrix to real rating matrx which makes it dense 
+  ratingmat = as(ratingmat, "realRatingMatrix") 
+  
+  #Normalize the ratings matrix 
+  ratingmat = normalize(ratingmat)    
+  
+  #Normalize the ratings matrix 
+  ratingmat = normalize(ratingmat)  
+  
+  #Create Recommender Model. The parameters are UBCF and Cosine similarity. We take 10 nearest neighbours</em>
+    rec_mod = Recommender(ratingmat, method = "UBCF", param=list(method="Cosine",nn=10))
+  
+  #Obtain top 5 recommendations for 1st user entry in dataset 
+  Top_5_pred = predict(rec_mod, ratingmat[1], n=5) 
+  
+  #Convert the recommendations to a list 
+  Top_5_List = as(Top_5_pred, "list") 
+  Top_5_List 
+#  "47"   "893"  "1769" "2567" "3423" 
+  
+  #Uncomment the following line if the package is not installed 
+  #install.packages("dplyr") 
+  library(dplyr)
+  
+  #We convert the list to a dataframe and change the column name to movieId 
+  Top_5_df=data.frame(Top_5_List) 
+  colnames(Top_5_df)="movieId"
+  
+  #Since movieId is of type integer in Movies data, we typecast id in our recommendations as well 
+  Top_5_df$movieId=as.numeric(levels(Top_5_df$movieId))
+  
+  #Merge the movie ids with names to get titles and genres 
+  names=left_join(Top_5_df, movies, by="movieId")
+  
+  #Print the titles and genres 
+  names 
+  
+  #     movieId                         title                                 genres 
+  #  1    1769         Replacement Killers, The (1998)                    Action|Crime|Thriller 
+  #  2    2567         EDtv (1999)                                              Comedy 
+  #  3    3423         School Daze (1988)                                       Drama 
+  #  4      47         Seven (a.k.a. Se7en) (1995)                          Mystery|Thriller 
+  #  5     893         Mother Night (1996)                                       Drama 
+  
+  
