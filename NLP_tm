@@ -44,7 +44,6 @@ points
 plot(points)
 ggplot(points, aes(x = x, y = y)) + geom_point(data = points, aes(x = x, y = y, color = df$view)) + geom_text(data = points, aes(x = x, y = y - 0.2, label = row.names(df)))
 
-# I had the same issue, and finally came to a solution:
 #   
 #   It seems that the meta information within the corpus object gets corrupted after applying transformations on it.
 # 
